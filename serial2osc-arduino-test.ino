@@ -4,8 +4,7 @@ void setup() {
 
 
 void loop() {
-  Serial.print(random(0,1000));
-  Serial.print("\n");
+  Serial.println(random(0,1000));
   delay(200);
   
 }
