@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include "lo/lo.h"
 
-//#include <iostream>
 #include <fcntl.h>
 #include <termios.h>
 
@@ -23,9 +22,18 @@
 
 
 #define USB_SERIAL_PORT "/dev/tty.usbmodem1411"
+#define ARGS    "s:b:p:t:hv"
+
 
 int port_fd;
-char portName[__DARWIN_MAXNAMLEN + 1];
+char portName[256];
+int baudRate = B9600;
+
+char *oscPort = "7770";
+char *oscIP = "localhost";
+
+char verbose = 0;
+int	c, errflg = 0;
 
 int init_serial_input (char * port) {
     int fd = 0;
@@ -41,8 +49,8 @@ int init_serial_input (char * port) {
     // disable parity generation and 2 stop bits
     options.c_cflag &= ~(PARENB | CSTOPB);
    
-    cfsetispeed(&options, B19200);
-    cfsetospeed(&options, B19200);
+    cfsetispeed(&options, baudRate);
+    cfsetospeed(&options, baudRate);
     
     // set the new port options
     tcsetattr(fd, TCSANOW, &options);
@@ -56,12 +64,11 @@ int read_serial_int (int fd) {
     
     read(fd, &c, 1);
     while (c != '\n') {
-    //while (c != ' ')  {
         ascii_int[i++] = c;
         read(fd, &c, 1);
        
     }
-     printf("readed %i \n",atoi(ascii_int));
+    if (verbose==1) printf("%s\n",ascii_int);
     return atoi(ascii_int);
 }
 
@@ -70,24 +77,10 @@ void  INThandler(int sig)
     
     close(port_fd);
     exit(0);
-    /*
-    char  c;
-    
-    
-    signal(sig, SIG_IGN);
-    printf("OUCH, did you hit Ctrl-C?\n"
-           "Do you really want to quit? [y/n] ");
-    c = getchar();
-    if (c == 'y' || c == 'Y') {
-        close(port_fd);
-        exit(0);
-    } else
-        signal(SIGINT, INThandler);
-    getchar(); // Get new line character
-     */
+ 
 }
 
-int getSerialPort() {
+int selectSerialPort() {
     
     DIR           *d;
     struct dirent *dir;
@@ -107,7 +100,7 @@ int getSerialPort() {
         }
         closedir(d);
         
-        printf("Please select a serial port: ");
+        printf("\nPlease select a serial port: ");
         char c = getchar();
         
         if (c>='0' || c <= '9') {
@@ -121,7 +114,7 @@ int getSerialPort() {
                     if (serialPortCount==choice) {
                         sprintf(portName,"/dev/%s", dir->d_name);
 
-                        printf("you selected %s\n",portName);
+                        printf("\nYou selected %s\n",portName);
                         
                         closedir(d);
                         return choice;
@@ -136,41 +129,73 @@ int getSerialPort() {
     return -1;
 }
 
-int main(int argc, const char * argv[]) {
-    // insert code here...
+int main(int argc, char **argv) {
+    char showSerialPortSelection = 1; // show serial port selection by default.
     
+    // read arguments
+    optarg = NULL;
+    while (!errflg && ((c = getopt(argc, argv, ARGS)) != EOF)){
+        switch (c) {
+            case 's': // serial port path argument
+                sprintf(portName,"%s", optarg);
+                showSerialPortSelection = 0;
+                break;
+            case 'b': // baud rate
+                baudRate = atoi(optarg);
+                break;
+            case 'p': // osc udp port
+                oscPort=optarg;
+                break;
+            case 't': // isc ip
+                oscIP=optarg;
+                break;
+            case 'h':
+                printf("usage : -s serial port path, -b serial port baud, -p port, -t target ip, -v verbose mode\n");
+                return 0;
+                break;
+            case 'v':
+                verbose = 1;
+            default :
+                errflg++;
+        }
+    }
     
     signal(SIGINT, INThandler);
     
-    printf("Hello, World!\n");
-    int portIndex = getSerialPort();
+    printf("\nserial2osc\nwww.happycodefarm.net\n(cc)Atelier Hypermédia - ESAA\n\n");
     
-    if (portIndex<=-1) {
-        printf("Wrong port selection\n");
-        exit(0);
+    if (showSerialPortSelection==1) { // show serial port selection
+        int portIndex = selectSerialPort();
+        
+        if (portIndex<=-1) {
+            printf("Illegal serial port selection\n");
+            exit(1);
+        }
+    } else if( access( portName, F_OK ) == -1 ) { // check for supplied serialport validity
+        printf("Serial port don't exist at %s\n", portName);
+        exit(1);
     }
+   
     
-    lo_address t = lo_address_new("127.0.0.1", "7770");
+    lo_address t = lo_address_new(oscIP, oscPort);
     
-//    if (lo_send(t, "/hello world !", NULL) == -1) {
-//        printf("OSC error %d: %s\n", lo_address_errno(t),
-//               lo_address_errstr(t));
-//    }
-    printf("init...\n");
-
     port_fd = init_serial_input(portName);
-    // serial is checked
+
     if (port_fd == -1)  {
         printf("Couldn't open Serial port\n");
-        exit(0);
+        exit(1);
     }
-     printf("Serial port inited\n");
+    printf("\nConfiguration\n");
+    printf("Port: %s\n", portName);
+    printf("Baud rate: %i\n", baudRate);
+    printf("OSC ip: %s\n", oscIP);
+    printf("OSC port: %s\n\n", oscPort);
+
     while(1) {
         if (lo_send(t, "/serial", "i", read_serial_int(port_fd)) == -1) {
             printf("OSC error %d: %s\n", lo_address_errno(t),
                    lo_address_errstr(t));
         }
-
     }
     
     return 0;
