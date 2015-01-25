@@ -1,6 +1,6 @@
 # serial2osc
 
-Tested on Mac OS X
+Tested on Mac OS X, should work on any POSIX system.
 
 To compile the code simply use : gcc main.c -o serial2osc -llo
 
