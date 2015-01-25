@@ -2,6 +2,11 @@
 
 serial2osc is a simple cli utility written in C that read a stream of integers sent by an Arduino over a serial connection and redirect it to an Open Sound Control (OSC) client.
 
+serial2osc expect a serie of string formated intergers separated by a new-line character.
+eg : SerialPrintln(random(1000));
+
+All serial messages are redirected to the /serial/ osc path.
+
 
 Tested on Mac OS X, but should work on any POSIX system.
 
