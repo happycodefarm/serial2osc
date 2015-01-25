@@ -15,7 +15,7 @@ You can modify the default options with the followings command-line arguments :
 
 -s serial port path, -b serial port baud, -p osc port, -t osc target ip, -v verbose mode
 
-eg ./serial2osc -s /dev/tty.usbmodem1411 -b 57600 -p 6666 -t 192.168.0.66 -v
+- eg: ./serial2osc -s /dev/tty.usbmodem1411 -b 57600 -p 6666 -t 192.168.0.66 -v
 
 Will open tty.usbmodem1411 at 57600 bauds and send everything on the osc address 192.168.0.66:6666
 
